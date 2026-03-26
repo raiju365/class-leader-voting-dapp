@@ -1,110 +1,100 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Env, String, Symbol, Vec};
 
-// Struktur data yang akan menyimpan notes
+// Candidate struct
 #[contracttype]
 #[derive(Clone, Debug)]
-pub struct Note {
-
+pub struct Candidate {
+    id: u64,
+    name: String,
+    vote_count: u64,
 }
 
-// Storage key untuk data notes
-// const NOTE_DATA: Symbol = symbol_short!("NOTE_DATA");
+// Storage key
+const CANDIDATE_DATA: Symbol = symbol_short!("CANDIDATE");
 
+// Contract
 #[contract]
-pub struct NotesContract;
+pub struct VotingContract;
 
 #[contractimpl]
-impl NotesContract {
-    // Fungsi untuk mendapatkan semua notes
-    pub fn get_notes(env: Env) -> Vec<Note> {
-        // 1. ambil data notes dari storage
-        
-        return [];
+impl VotingContract {
+
+    // Get all candidates
+    pub fn get_candidates(env: Env) -> Vec<Candidate> {
+        let candidates: Vec<Candidate> = env
+            .storage()
+            .instance()
+            .get(&CANDIDATE_DATA)
+            .unwrap_or(Vec::new(&env));
+
+        candidates
     }
 
-    // Fungsi untuk membuat note baru
-    pub fn create_note(env: Env, title: String, content: String) -> String {
-        // 1. ambil data notes dari storage
-        
-        // 2. Buat object note baru
-        
-        // 3. tambahkan note baru ke notes lama
-        
-        // 4. simpan notes ke storage
-        
-        return String::from_str(&env, "Notes berhasil ditambahkan");
+    // Create new candidate
+    pub fn create_candidate(env: Env, name: String) -> String {
+        let mut candidates: Vec<Candidate> = env
+            .storage()
+            .instance()
+            .get(&CANDIDATE_DATA)
+            .unwrap_or(Vec::new(&env));
+
+        let candidate = Candidate {
+            id: env.prng().gen::<u64>(),
+            name,
+            vote_count: 0,
+        };
+
+        candidates.push_back(candidate);
+        env.storage().instance().set(&CANDIDATE_DATA, &candidates);
+
+        String::from_str(&env, "Candidate created")
     }
 
-    // Fungsi untuk menghapus notes berdasarkan id
-    pub fn delete_note(env: Env, id: u64) -> String {
-        // 1. ambil data notes dari storage 
+    // Vote candidate
+    pub fn vote(env: Env, id: u64) -> String {
+        let mut candidates: Vec<Candidate> = env
+            .storage()
+            .instance()
+            .get(&CANDIDATE_DATA)
+            .unwrap_or(Vec::new(&env));
 
-        // 2. cari index note yang akan dihapus menggunakan perulangan
+        for i in 0..candidates.len() {
+            let mut candidate = candidates.get(i).unwrap();
 
-        return String::from_str(&env, "Notes tidak ditemukan")
+            if candidate.id == id {
+                candidate.vote_count += 1;
+                candidates.set(i, candidate);
+
+                env.storage().instance().set(&CANDIDATE_DATA, &candidates);
+
+                return String::from_str(&env, "Vote success");
+            }
+        }
+
+        String::from_str(&env, "Candidate not found")
+    }
+
+    // Delete candidate
+    pub fn delete_candidate(env: Env, id: u64) -> String {
+        let mut candidates: Vec<Candidate> = env
+            .storage()
+            .instance()
+            .get(&CANDIDATE_DATA)
+            .unwrap_or(Vec::new(&env));
+
+        for i in 0..candidates.len() {
+            if candidates.get(i).unwrap().id == id {
+                candidates.remove(i);
+
+                env.storage().instance().set(&CANDIDATE_DATA, &candidates);
+
+                return String::from_str(&env, "Candidate deleted");
+            }
+        }
+
+        String::from_str(&env, "Candidate not found")
     }
 }
 
 mod test;
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* --- CONTOH SCRIPT ---
-
-pub fn get_notes(env: Env) -> Vec<Note> {
-    // 1. ambil data notes dari storage
-    return env.storage().instance().get(&NOTE_DATA).unwrap_or(Vec::new(&env));
-}
-
-// Fungsi untuk membuat note baru
-pub fn create_note(env: Env, title: String, content: String) -> String {
-    // 1. ambil data notes dari storage
-    let mut notes: Vec<Note> = env.storage().instance().get(&NOTE_DATA).unwrap_or(Vec::new(&env));
-    
-    // 2. Buat object note baru
-    let note = Note {
-        id: env.prng().gen::<u64>(),
-        title: title,
-        content: content,
-    };
-    
-    // 3. tambahkan note baru ke notes lama
-    notes.push_back(note);
-    
-    // 4. simpan notes ke storage
-    env.storage().instance().set(&NOTE_DATA, &notes);
-    
-    return String::from_str(&env, "Notes berhasil ditambahkan");
-}
-
-// Fungsi untuk menghapus notes berdasarkan id
-pub fn delete_note(env: Env, id: u64) -> String {
-    // 1. ambil data notes dari storage 
-    let mut notes: Vec<Note> = env.storage().instance().get(&NOTE_DATA).unwrap_or(Vec::new(&env));
-
-    // 2. cari index note yang akan dihapus menggunakan perulangan
-    for i in 0..notes.len() {
-        if notes.get(i).unwrap().id == id {
-            notes.remove(i);
-
-            env.storage().instance().set(&NOTE_DATA, &notes);
-            return String::from_str(&env, "Berhasil hapus notes");
-        }
-    }
-
-    return String::from_str(&env, "Notes tidak ditemukan")
-}
-
-
-*/
